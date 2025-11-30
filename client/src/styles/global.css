@@ -1,0 +1,389 @@
+/* Professional WhatsApp-inspired UI Design */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  font-family: 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  background: #e5ddd5;
+  color: #111b21;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* App Header / Navbar */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  height: 60px;
+  background: #008069;
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.app-header .brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-header .brand a {
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 20px;
+  letter-spacing: -0.3px;
+}
+
+.nav-links {
+  display: flex;
+  gap: 20px;
+}
+
+.nav-links a {
+  color: rgba(255,255,255,0.95);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 15px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  transition: background 0.2s;
+}
+
+.nav-links a:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+.user-info {
+  font-size: 14px;
+  opacity: 0.95;
+  font-weight: 500;
+}
+
+/* Auth Pages - Centered Card Design */
+.page.login-page,
+.page.register-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 60px);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+}
+
+.auth-card {
+  background: #fff;
+  padding: 40px;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+  width: 100%;
+  max-width: 420px;
+}
+
+.auth-card h2 {
+  margin-bottom: 24px;
+  color: #111b21;
+  font-size: 28px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.auth-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth-form label span {
+  font-size: 14px;
+  font-weight: 500;
+  color: #54656f;
+}
+
+.auth-form input[type="text"],
+.auth-form input[type="password"] {
+  padding: 14px 16px;
+  border: 2px solid #e9edef;
+  border-radius: 8px;
+  font-size: 15px;
+  transition: border-color 0.2s;
+  outline: none;
+}
+
+.auth-form input:focus {
+  border-color: #008069;
+}
+
+.auth-form button {
+  padding: 14px 16px;
+  border: none;
+  background: #008069;
+  color: white;
+  font-weight: 600;
+  font-size: 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-top: 8px;
+}
+
+.auth-form button:hover {
+  background: #06cf9c;
+}
+
+.auth-footer {
+  text-align: center;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e9edef;
+}
+
+.small-link {
+  color: #008069;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.small-link:hover {
+  color: #06cf9c;
+  text-decoration: underline;
+}
+
+/* Dashboard Layout */
+.page.dashboard-page {
+  display: flex;
+  height: calc(100vh - 60px);
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  background: #fff;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* Contact List Sidebar */
+.contact-list {
+  width: 360px;
+  border-right: 1px solid #e9edef;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 100%;
+}
+
+.contact-list h3 {
+  padding: 16px 20px;
+  background: #f0f2f5;
+  font-size: 18px;
+  font-weight: 600;
+  border-bottom: 1px solid #e9edef;
+  flex-shrink: 0;
+}
+
+.contacts-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.contacts-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.contacts-scroll::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+.contacts-scroll::-webkit-scrollbar-thumb:hover {
+  background: #aaa;
+}
+
+.contact-item {
+  padding: 14px 20px;
+  border-bottom: 1px solid #f0f2f5;
+  cursor: pointer;
+  transition: background 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.contact-item:hover {
+  background: #f5f6f6;
+}
+
+.contact-item.active {
+  background: #e9edef;
+}
+
+.contact-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.contact-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.contact-info strong {
+  display: block;
+  font-size: 16px;
+  color: #111b21;
+  margin-bottom: 2px;
+}
+
+/* Chat Window */
+.page.chatroom-page {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 60px);
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  background: #e5ddd5;
+  border-radius: 0;
+}
+
+.chat-window {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #efeae2;
+}
+
+.chat-header {
+  padding: 14px 20px;
+  background: #f0f2f5;
+  border-bottom: 1px solid #e9edef;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.chat-header h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111b21;
+  margin: 0;
+}
+
+.messages-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iYSIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIj48cGF0aCBmaWxsPSJub25lIiBzdHJva2U9IiNkMWQ3ZGIiIHN0cm9rZS13aWR0aD0iMC41IiBkPSJNMCAyMGgyME0yMCAyMHYyMCIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNhKSIvPjwvc3ZnPg==');
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.message-bubble {
+  max-width: 65%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  position: relative;
+  word-wrap: break-word;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.message-bubble.sent {
+  background: #d9fdd3;
+  align-self: flex-start;
+  margin-right: auto;
+}
+
+.message-bubble.received {
+  background: #fff;
+  align-self: flex-end;
+  margin-left: auto;
+}
+
+.message-text {
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: #111b21;
+  margin-bottom: 4px;
+}
+
+.message-time {
+  font-size: 11px;
+  color: #667781;
+  text-align: right;
+  margin-top: 4px;
+}
+
+.chat-input-container {
+  padding: 12px 20px;
+  background: #f0f2f5;
+  border-top: 1px solid #e9edef;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.chat-input-container input {
+  flex: 1;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 24px;
+  background: #fff;
+  font-size: 15px;
+  outline: none;
+}
+
+.chat-input-container button {
+  padding: 10px 20px;
+  background: #008069;
+  color: white;
+  border: none;
+  border-radius: 24px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.chat-input-container button:hover {
+  background: #06cf9c;
+}
+
+/* Utility Classes */
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  background: #fff;
+  min-height: calc(100vh - 60px);
+}

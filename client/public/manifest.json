@@ -1,0 +1,9 @@
+{
+  "short_name": "SecureChat",
+  "name": "Secure End-to-End Encrypted Messaging System",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "icons": []
+}

@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  server-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install server deps
+        working-directory: server/src
+        run: npm install
+      - name: Run server tests
+        working-directory: server/src
+        run: npm test
+
+  client-demo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install client deps
+        working-directory: client
+        run: npm install || echo 'client install skipped if no deps'
+      - name: Run encrypt/decrypt demo
+        run: node client/src/tests/encrypt_file_demo.cjs

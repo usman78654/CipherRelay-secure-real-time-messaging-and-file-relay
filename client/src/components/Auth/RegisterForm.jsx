@@ -1,0 +1,97 @@
+import { useState } from "react";
+import { generateUserKeyPair } from "../../crypto/keygen/generateKeys";
+import { storeKeysSecurely } from "../../crypto/keygen/storeKeys";
+
+const RegisterForm = ({ onSubmit }) => {
+  const [form, setForm] = useState({ username: "", password: "" });
+  const [generatingKeys, setGeneratingKeys] = useState(false);
+  const [error, setError] = useState("");
+  const [keyGenStatus, setKeyGenStatus] = useState("");
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setGeneratingKeys(true);
+
+    try {
+      // Step 1: Generate ECC key pairs
+      setKeyGenStatus("Generating ECDSA signing keys...");
+      const keys = await generateUserKeyPair();
+      
+      setKeyGenStatus("Generating ECDH key exchange keys...");
+      console.log('✓ ECC Keys generated:', {
+        signing: 'ECDSA P-256',
+        ecdh: 'ECDH P-256'
+      });
+
+      // Step 2: Store keys securely in IndexedDB (client-side only)
+      setKeyGenStatus("Storing keys securely in IndexedDB...");
+      await storeKeysSecurely({ username: form.username, ...keys }, null);
+      console.log('✓ Keys stored in IndexedDB (never sent to server)');
+
+      // Step 3: Proceed with account registration
+      setKeyGenStatus("Creating account...");
+      await onSubmit(form);
+      
+    } catch (err) {
+      console.error('Registration error:', err);
+      setError(err.response?.data?.error || err.message || "Registration failed");
+    } finally {
+      setGeneratingKeys(false);
+      setKeyGenStatus("");
+    }
+  };
+
+  return (
+    <div className="auth-card">
+      <h2>Create Account</h2>
+      {error && <p style={{ color: "red", fontSize: "14px", marginBottom: "10px" }}>{error}</p>}
+      {generatingKeys && (
+        <div style={{ 
+          background: "#e7f5ec", 
+          padding: "12px", 
+          borderRadius: "8px", 
+          marginBottom: "15px",
+          border: "1px solid #008069"
+        }}>
+          <p style={{ color: "#008069", fontSize: "14px", margin: 0 }}>
+            🔐 {keyGenStatus}
+          </p>
+        </div>
+      )}
+      <form className="auth-form" onSubmit={handleSubmit}>
+        <label>
+          <span>Username</span>
+          <input
+            type="text"
+            placeholder="Choose a username"
+            value={form.username}
+            onChange={(e) => setForm({ ...form, username: e.target.value })}
+            required
+          />
+        </label>
+
+        <label>
+          <span>Password</span>
+          <input
+            type="password"
+            placeholder="Choose a strong password"
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            required
+          />
+        </label>
+
+        <button type="submit" disabled={generatingKeys}>
+          {generatingKeys ? 'Generating Keys...' : 'Create Account'}
+        </button>
+      </form>
+      
+      <div className="auth-footer">
+        <a className="small-link" href="/login">Already have an account? Sign in</a>
+      </div>
+    </div>
+  );
+};
+
+export default RegisterForm;
