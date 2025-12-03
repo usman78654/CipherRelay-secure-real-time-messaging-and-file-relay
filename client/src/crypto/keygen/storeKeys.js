@@ -12,7 +12,7 @@ export const storeKeysSecurely = async (publicKey, privateKey) => {
   // Expect an object like { username, signing: { publicKey, privateKey }, ecdh: { publicKey, privateKey } }
   const id = publicKey.username || publicKey.id || 'local-user';
 
-  const out = { id };
+  const out = { id, username: id }; // Store username explicitly
 
   if (publicKey.signing && publicKey.signing.publicKey) {
     const pubSpki = await subtle.exportKey('spki', publicKey.signing.publicKey);
@@ -30,4 +30,6 @@ export const storeKeysSecurely = async (publicKey, privateKey) => {
 
   // Persist under the `publicKey` field (saveKeys expects publicKey, privateKey)
   await saveKeys(id, out, null);
+  
+  console.log(`✅ Keys stored for user: ${id}`);
 };

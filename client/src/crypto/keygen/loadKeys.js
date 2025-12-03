@@ -22,24 +22,31 @@ export const loadUserKeys = async () => {
 
 export const loadKeysSecurely = async (id) => {
   const { loadKeys } = await import('../../storage/indexedDB.js');
-  const { cacheGet } = await import('../../storage/localCache.js');
+  const { AuthService } = await import('../../services/authService.js');
   const subtle = (typeof window !== 'undefined' && window.crypto && window.crypto.subtle) ? window.crypto.subtle : (globalThis.crypto && globalThis.crypto.subtle) ? globalThis.crypto.subtle : null;
   if (!subtle) throw new Error('Web Crypto API not available');
 
-  // If no id provided, get username from auth token
+  // If no id provided, get username from AuthService
   let username = id;
   if (!username) {
     try {
-      const authData = cacheGet('auth_token');
-      username = authData?.user?.username || authData?.username || 'local-user';
+      username = AuthService.getUsername();
+      
+      if (!username) {
+        username = 'local-user';
+      }
     } catch (err) {
-      console.warn('Could not get username from auth token, using local-user');
+      console.warn('Could not get username from auth, using local-user:', err.message);
       username = 'local-user';
     }
   }
 
+  console.log(`🔍 Loading keys for user: ${username}`);
   const entry = await loadKeys(username);
-  if (!entry) return null;
+  if (!entry) {
+    console.warn(`⚠️ No keys found for user: ${username}`);
+    return null;
+  }
 
   // Our save format stores the exported object under `publicKey`.
   const store = entry.publicKey || entry;
@@ -51,6 +58,9 @@ export const loadKeysSecurely = async (id) => {
       publicKey: await subtle.importKey('spki', pubBuf, { name: 'ECDSA', namedCurve: 'P-256' }, true, ['verify']),
       privateKey: await subtle.importKey('jwk', store.signingPrivate, { name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign']),
     };
+    console.log(`✅ Loaded ECDSA signing keys for ${username}`);
+  } else {
+    console.warn(`⚠️ No signing keys found in storage for ${username}`);
   }
 
   if (store.ecdhPublic && store.ecdhPrivate) {
@@ -59,6 +69,9 @@ export const loadKeysSecurely = async (id) => {
       publicKey: await subtle.importKey('raw', pubBuf, { name: 'ECDH', namedCurve: 'P-256' }, true, []),
       privateKey: await subtle.importKey('jwk', store.ecdhPrivate, { name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveKey', 'deriveBits']),
     };
+    console.log(`✅ Loaded ECDH exchange keys for ${username}`);
+  } else {
+    console.warn(`⚠️ No ECDH keys found in storage for ${username}`);
   }
 
   return result;
