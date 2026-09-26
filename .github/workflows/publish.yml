@@ -17,6 +17,7 @@ jobs:
         working-directory: server/src
         env:
           MONGOMS_VERSION: "7.0.14"
+          MONGOMS_DISTRO: "ubuntu-22.04"
       - name: Build and test exactly the images to publish
         run: |
           node scripts/ops.mjs init

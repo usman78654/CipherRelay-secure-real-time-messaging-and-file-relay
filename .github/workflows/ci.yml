@@ -28,6 +28,7 @@ jobs:
         working-directory: server/src
         env:
           MONGOMS_VERSION: "7.0.14"
+          MONGOMS_DISTRO: "ubuntu-22.04"
       - run: npm ci
         working-directory: client
       - run: npm run build
