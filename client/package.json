@@ -29,6 +29,6 @@
   },
   "proxy": "http://localhost:5000",
   "devDependencies": {
-    "typescript": "^4.9.5"
+    "typescript": "^7.0.2"
   }
 }
