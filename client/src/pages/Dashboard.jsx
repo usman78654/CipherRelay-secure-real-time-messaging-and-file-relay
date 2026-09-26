@@ -15,7 +15,7 @@ const Dashboard = ({ user, contacts, onSelectContact }) => {
         // Filter out current user and map to contact format
         const users = response.data
           .filter(u => u._id !== user?.id && u._id !== user?.user?.id)
-          .map(u => ({ id: u._id, name: u.username }));
+          .map(u => ({ id: u._id, name: u.username, identityKeys: u.identityKeys }));
         setAllUsers(users);
       } catch (err) {
         console.warn('Failed to fetch users:', err);

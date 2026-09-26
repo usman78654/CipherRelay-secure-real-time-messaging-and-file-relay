@@ -1,5 +1,7 @@
 // Demo: encrypt and decrypt a generated buffer using encryptFile/decryptFile
 (async () => {
+  const assert = require('node:assert/strict');
+  global.window = { crypto: require('node:crypto').webcrypto };
   const path = require('path');
   const { pathToFileURL } = require('url');
   const root = path.resolve(__dirname, '..');
@@ -31,5 +33,12 @@
   // Compare
   const same = outBytes.length === arr.length && outBytes.every((v, i) => v === arr[i]);
   console.log('Decrypt matches original:', same);
+  assert.equal(same, true);
+  const tampered = structuredClone(res);
+  const bytes = Buffer.from(tampered.encryptedChunks[0].ciphertext, 'base64');
+  bytes[0] ^= 1;
+  tampered.encryptedChunks[0].ciphertext = bytes.toString('base64');
+  await assert.rejects(() => decryptFile(tampered, key));
+  console.log('Tampered ciphertext rejected: true');
   process.exit(same ? 0 : 2);
 })();

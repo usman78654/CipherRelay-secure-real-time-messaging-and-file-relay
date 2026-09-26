@@ -1,59 +1,40 @@
-import express from "express";
-import cors from "cors";
-import helmet from "helmet";
-import bodyParser from "body-parser";
-import connectDB from "./config/db.js";
-import config from "./config/env.js";
-import authRoutes from "./routes/authRoutes.js";
-import chatRoutes from "./routes/chatRoutes.js";
-import fileRoutes from "./routes/fileRoutes.js";
-import keyExchangeRoutes from "./routes/keyExchangerputes.js";
-import auditRoutes from "./routes/auditRoutes.js";
-import { errorHandler } from "./middleware/errorHandler.js";
-
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import mongoose from 'mongoose';
+import config from './config/env.js';
+import authRoutes from './routes/authRoutes.js';
+import chatRoutes from './routes/chatRoutes.js';
+import fileRoutes from './routes/fileRoutes.js';
+import auditRoutes from './routes/auditRoutes.js';
+import { errorHandler } from './middleware/errorHandler.js';
+import { observeRequest } from './services/telemetry.js';
+import { rateLimit } from './middleware/rateLimit.js';
 const app = express();
-
-// Connect to DB unless tests or explicit env disables it.
-if (process.env.SKIP_DB !== '1') {
-	connectDB();
-} else {
-	console.log('SKIP_DB set, skipping MongoDB connection (test mode).');
-}
-
+app.disable('x-powered-by');
+app.set('trust proxy', config.TRUST_PROXY);
+app.locals.draining = false;
 app.use(helmet());
-app.use(cors());
-// Capture raw body for better JSON parse error diagnostics
-app.use(bodyParser.json({
-	limit: '10mb',
-	verify: (req, _res, buf) => {
-		try {
-			req.rawBody = buf.toString();
-		} catch (e) {
-			req.rawBody = undefined;
-		}
-	}
-}));
-
-app.use(bodyParser.urlencoded({
-	extended: true,
-	verify: (req, _res, buf) => {
-		try {
-			req.rawBody = buf.toString();
-		} catch (e) {
-			req.rawBody = undefined;
-		}
-	}
-}));
-
-app.get("/", (req, res) => res.json({ message: "Secure Chat Server running" }));
-
-app.use("/api/auth", authRoutes);
-app.use("/api/chat", chatRoutes);
-app.use("/api/files", fileRoutes);
-app.use("/api/key-exchange", keyExchangeRoutes);
-app.use("/api/audit", auditRoutes);
-
-// Error handler
+app.use(observeRequest);
+app.use((req, res, next) => {
+  const origin = req.get('origin');
+  if (origin && !config.ALLOWED_ORIGINS.includes(origin)) return res.status(403).json({ error: 'Origin not allowed.' });
+  next();
+});
+app.use(cors({ origin: config.ALLOWED_ORIGINS }));
+app.get('/health/live', (_req, res) => res.json({ status: 'alive' }));
+app.get('/health/ready', (_req, res) => {
+  const ready = mongoose.connection.readyState === 1 && !app.locals.draining;
+  res.status(ready ? 200 : 503).json({ status: ready ? 'ready' : 'unavailable' });
+});
+app.use('/api', rateLimit);
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: false, limit: '10mb' }));
+app.get('/', (_req, res) => res.json({ message: 'Secure Chat Server running' }));
+app.use('/api/auth', authRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/files', fileRoutes);
+app.use('/api/audit', auditRoutes);
+app.use((_req, res) => res.status(404).json({ error: 'Not found.' }));
 app.use(errorHandler);
-
 export default app;

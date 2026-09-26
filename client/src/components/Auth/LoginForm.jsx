@@ -2,15 +2,22 @@ import { useState } from "react";
 
 const LoginForm = ({ onSubmit }) => {
   const [form, setForm] = useState({ username: "", password: "" });
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSubmit(form);  // Parent passes final auth handler
+    setError('');
+    setSubmitting(true);
+    try { await onSubmit(form); }
+    catch (err) { setError(err.response?.data?.error || 'Sign in failed.'); }
+    finally { setSubmitting(false); }
   };
 
   return (
     <div className="auth-card">
       <h2>Welcome Back</h2>
+      {error && <p role="alert" style={{ color: 'red' }}>{error}</p>}
       <form className="auth-form" onSubmit={handleSubmit} aria-label="Login form">
         <label>
           <span>Username</span>
@@ -20,6 +27,7 @@ const LoginForm = ({ onSubmit }) => {
             value={form.username}
             onChange={(e) => setForm({ ...form, username: e.target.value })}
             required
+            autoComplete="username"
           />
         </label>
 
@@ -31,10 +39,11 @@ const LoginForm = ({ onSubmit }) => {
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
             required
+            autoComplete="current-password"
           />
         </label>
 
-        <button type="submit">Sign In</button>
+        <button type="submit" disabled={submitting}>{submitting ? 'Signing in…' : 'Sign In'}</button>
       </form>
       
       <div className="auth-footer">

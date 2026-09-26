@@ -3,6 +3,8 @@ import config from "../config/env.js";
 import { logEvent } from "../services/logger.js";
 import { verifyAndUpdateSeq } from "../services/seqCounterService.js";
 import Message from "../models/Message.js";
+import FileModel from '../models/File.js';
+import { sockets } from '../services/telemetry.js';
 
 /**
  * Initialize Socket.IO chat handlers.
@@ -18,7 +20,7 @@ export default function initChatSocket(io) {
           ? socket.handshake.headers.authorization.replace(/^Bearer\s+/, "")
           : null;
 
-      if (!token) return next(); // allow unauthenticated sockets (optional)
+      if (!token) return next(new Error('Unauthorized'));
 
       const decoded = jwt.verify(token, config.JWT_SECRET);
       socket.user = { id: decoded.sub, username: decoded.username };
@@ -30,6 +32,9 @@ export default function initChatSocket(io) {
   });
 
   io.on("connection", (socket) => {
+    sockets.inc();
+    let windowStart = Date.now();
+    let messagesInWindow = 0;
     const userId = socket.user ? socket.user.id : null;
     const username = socket.user ? socket.user.username : null;
     logEvent("socket-connection", { sid: socket.id, user: userId, username }, userId);
@@ -37,13 +42,15 @@ export default function initChatSocket(io) {
     // Join a username-based room so we can address by username
     if (username) {
       socket.join(`user:${username}`);
-      console.log(`✅ Socket ${socket.id} joined room: user:${username}`);
     }
 
     socket.on("send-encrypted-message", async (packet) => {
       // packet: { chatId, sender, receiver, ciphertext, iv, authTag, metadata }
       // OR file message: { chatId, sender, receiver, isFile, fileId, fileName, fileSize, fileType, metadata }
       try {
+        if (Date.now() - windowStart > 60000) { windowStart = Date.now(); messagesInWindow = 0; }
+        if (++messagesInWindow > 120) return socket.emit('error', { error: 'Too many messages.' });
+        if (packet?.sender !== username) return socket.emit('error', { error: 'Sender must match authenticated user.' });
         // Validate basic packet structure
         if (!packet || !packet.chatId || !packet.sender || !packet.receiver) {
           await logEvent("socket-message-invalid", { packet }, userId);
@@ -52,6 +59,8 @@ export default function initChatSocket(io) {
 
         // Check if it's a file message
         if (packet.isFile || packet.fileId) {
+          const file = await FileModel.findOne({ _id: packet.fileId, owner: username, receiver: packet.receiver });
+          if (!file) return socket.emit('error', { error: 'File access denied.' });
           // File message - no ciphertext/iv required
           if (!packet.fileId) {
             await logEvent("socket-file-message-invalid", { packet }, userId);
@@ -76,7 +85,6 @@ export default function initChatSocket(io) {
 
           // Relay to receiver
           const room = `user:${packet.receiver}`;
-          console.log(`📤 Emitting file message to room: ${room}`);
           io.to(room).emit("receive-encrypted-message", {
             chatId: packet.chatId,
             sender: packet.sender,
@@ -124,7 +132,6 @@ export default function initChatSocket(io) {
 
         // Relay to receiver's room if connected
         const room = `user:${packet.receiver}`;
-        console.log(`📤 Emitting message to room: ${room}, sender: ${packet.sender}`);
         io.to(room).emit("receive-encrypted-message", {
           chatId: packet.chatId,
           sender: packet.sender,
@@ -143,6 +150,7 @@ export default function initChatSocket(io) {
     });
 
     socket.on("disconnect", (reason) => {
+      sockets.dec();
       logEvent("socket-disconnect", { sid: socket.id, reason }, userId);
     });
   });

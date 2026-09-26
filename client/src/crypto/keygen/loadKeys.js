@@ -51,6 +51,9 @@ export const loadKeysSecurely = async (id) => {
   // Our save format stores the exported object under `publicKey`.
   const store = entry.publicKey || entry;
   const result = { username }; // Include username in result
+  if (store.version === 2 && store.signing?.privateKey && store.ecdh?.privateKey) {
+    return { username, signing: store.signing, ecdh: store.ecdh };
+  }
   
   if (store.signingPublic && store.signingPrivate) {
     const pubBuf = new Uint8Array(store.signingPublic).buffer;

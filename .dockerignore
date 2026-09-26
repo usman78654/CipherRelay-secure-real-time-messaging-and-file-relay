@@ -1,0 +1,13 @@
+**/node_modules
+**/.env*
+**/build
+**/.git
+.secrets
+backups
+logs
+**/*.log
+attacks
+docs
+reports
+scans
+scan-source

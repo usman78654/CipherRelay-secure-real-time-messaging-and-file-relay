@@ -1,6 +1,5 @@
 # Dependencies
 node_modules/
-package-lock.json
 
 # Environment variables
 .env
@@ -52,6 +51,12 @@ coverage/
 *.pem
 *.key
 private_keys/
+.secrets/
+backups/
+reports/
+scans/
+scan-source/
+.release-state.json
 
 # Attack demonstration outputs (optional - include if you want to share results)
 # attacks/mitm/mitm_demo_output.txt

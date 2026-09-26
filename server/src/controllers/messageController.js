@@ -24,6 +24,7 @@ export const sendMessage = async (req, res) => {
       }
     */
     const { sender, receiver, ciphertext, iv, authTag, metadata } = req.body;
+    if (sender !== req.user.username) return res.status(403).json({ error: 'Sender must match authenticated user.' });
 
     if (!sender || !receiver || !ciphertext || !iv) {
       await logEvent("message-invalid-format", { body: req.body }, sender || null);
@@ -79,16 +80,14 @@ export const sendMessage = async (req, res) => {
 export const getMessages = async (req, res) => {
   try {
     const { chatId } = req.params;
-    console.log('getMessages called with chatId:', chatId);
 
-    const messages = await Message.find({ chatId });
-    console.log(`Found ${messages.length} messages for chatId: ${chatId}`);
+    const messages = await Message.find({ chatId, $or: [{ sender: req.user.username }, { receiver: req.user.username }] }).sort({ createdAt: -1 }).limit(500);
+    messages.reverse();
     
     // Log metadata access
     await logEvent("message-fetch", { chatId, requester: req.user ? req.user.id : null, count: messages.length }, req.user ? req.user.id : null);
     res.json(messages);
   } catch (err) {
-    console.error('getMessages error:', err);
     res.status(500).json({ error: "Failed to fetch messages." });
   }
 };

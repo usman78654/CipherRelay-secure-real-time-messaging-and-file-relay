@@ -2,7 +2,7 @@
  * AES-256-GCM message decryption scaffolding.
  */
 
-export const decryptMessage = async (encryptedPacket, sessionKey) => {
+export const decryptMessage = async (encryptedPacket, sessionKey, context = null) => {
   if (!window.crypto || !window.crypto.subtle) {
     throw new Error('Web Crypto API not available');
   }
@@ -28,7 +28,8 @@ export const decryptMessage = async (encryptedPacket, sessionKey) => {
     combined.set(ctext, 0);
     if (authTag.length) combined.set(authTag, ctext.length);
 
-    const plainBuf = await subtle.decrypt({ name: 'AES-GCM', iv }, sessionKey, combined.buffer);
+    const additionalData = context ? new TextEncoder().encode(JSON.stringify(context)) : undefined;
+    const plainBuf = await subtle.decrypt({ name: 'AES-GCM', iv, additionalData }, sessionKey, combined.buffer);
     const dec = new TextDecoder();
     return dec.decode(plainBuf);
   } catch (err) {

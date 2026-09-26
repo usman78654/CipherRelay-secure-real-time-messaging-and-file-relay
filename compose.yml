@@ -1,0 +1,145 @@
+name: ${COMPOSE_PROJECT_NAME:-securechat}
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  mongo:
+    image: mongo:7.0
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD_FILE: /run/secrets/mongo_root_password
+      MONGO_INITDB_DATABASE: securechat
+    secrets: [mongo_root_password, mongo_password]
+    volumes:
+      - mongo_data:/data/db
+      - ./deploy/mongo-init.js:/docker-entrypoint-initdb.d/10-chat.js:ro
+    networks: [backend]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "quit(db.adminCommand('ping').ok ? 0 : 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    mem_limit: 512m
+    logging: *logging
+
+  api:
+    image: ${IMAGE_PREFIX:-securechat}-api:${APP_TAG:-local}
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    restart: unless-stopped
+    init: true
+    read_only: true
+    user: "1000:1000"
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs: ["/tmp:size=16m,mode=1777"]
+    environment:
+      NODE_ENV: production
+      PORT: "5000"
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      MONGO_PASSWORD_FILE: /run/secrets/mongo_password
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:8080}
+      TRUST_PROXY: "1"
+      METRICS_HOST: "0.0.0.0"
+    secrets: [jwt_secret, mongo_password]
+    depends_on:
+      mongo: { condition: service_healthy }
+    networks: [backend, edge]
+    stop_grace_period: 25s
+    mem_limit: 256m
+    logging: *logging
+
+  web:
+    image: ${IMAGE_PREFIX:-securechat}-web:${APP_TAG:-local}
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+    restart: unless-stopped
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-http://localhost}
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${HTTP_PORT:-8080}:80"
+      - "${BIND_ADDRESS:-127.0.0.1}:${HTTPS_PORT:-8443}:443"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api: { condition: service_healthy }
+    networks: [edge]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 128m
+    logging: *logging
+
+  prometheus:
+    image: prom/prometheus:v3.15.0
+    profiles: [monitoring]
+    restart: unless-stopped
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=3d", "--storage.tsdb.retention.size=256MB"]
+    volumes:
+      - ./deploy/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    ports: ["127.0.0.1:9091:9090"]
+    networks: [backend, monitoring]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:9090/-/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    mem_limit: 256m
+    logging: *logging
+
+  grafana:
+    image: grafana/grafana:13.2.2
+    profiles: [monitoring]
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_password
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+    secrets: [grafana_password]
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./deploy/monitoring/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/monitoring/dashboards:/var/lib/grafana/dashboards:ro
+    ports: ["127.0.0.1:3001:3000"]
+    networks: [monitoring]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    mem_limit: 256m
+    logging: *logging
+
+networks:
+  edge:
+  monitoring:
+  backend:
+    internal: true
+volumes:
+  mongo_data:
+  caddy_data:
+  caddy_config:
+  prometheus_data:
+  grafana_data:
+secrets:
+  jwt_secret:
+    file: ./.secrets/jwt_secret
+  mongo_password:
+    file: ./.secrets/mongo_password
+  mongo_root_password:
+    file: ./.secrets/mongo_root_password
+  grafana_password:
+    file: ./.secrets/grafana_password

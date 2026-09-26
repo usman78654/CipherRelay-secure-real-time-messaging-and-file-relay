@@ -1,0 +1,17 @@
+groups:
+  - name: chat
+    rules:
+      - alert: ChatApiDown
+        expr: up{job="chat-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Chat API metrics are unreachable"
+      - alert: ChatHighErrorRate
+        expr: sum(rate(chat_http_requests_total{status=~"5.."}[5m])) / clamp_min(sum(rate(chat_http_requests_total[5m])), 0.001) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "More than 5% of API requests are failing"

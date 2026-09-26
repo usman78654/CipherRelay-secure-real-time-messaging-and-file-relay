@@ -1,0 +1,35 @@
+{
+  admin off
+}
+
+:8081 {
+  bind 127.0.0.1
+  respond /health 200
+}
+
+{$SITE_ADDRESS:http://localhost} {
+  encode zstd gzip
+  header {
+    -Server
+    X-Content-Type-Options nosniff
+    Referrer-Policy no-referrer
+    X-Frame-Options DENY
+    Permissions-Policy "camera=(), microphone=(), geolocation=()"
+    Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+  }
+  # Access metadata is logged by the API without query strings or credentials.
+  @private path /metrics /metrics/*
+  handle @private {
+    respond 404
+  }
+  @backend path /api/* /socket.io/* /health/*
+  handle @backend {
+    reverse_proxy api:5000
+  }
+  handle {
+    root * /srv
+    try_files {path} /index.html
+    header Cache-Control "no-cache"
+    file_server
+  }
+}

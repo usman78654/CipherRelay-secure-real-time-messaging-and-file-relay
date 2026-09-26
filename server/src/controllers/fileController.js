@@ -12,6 +12,7 @@ export const uploadEncryptedFile = async (req, res) => {
     const uploadedInfo = req.body;
     // Expect: owner, receiver, fileName, encryptedChunks (array), metadata: { chunkSize, ivs, tags, timestamp }
     const { owner, receiver, encryptedChunks, metadata } = uploadedInfo;
+    if (owner !== req.user.username) return res.status(403).json({ error: 'Owner must match authenticated user.' });
     if (!owner || !receiver || !Array.isArray(encryptedChunks) || encryptedChunks.length === 0) {
       return res.status(400).json({ error: "Invalid encrypted file upload." });
     }
@@ -44,6 +45,8 @@ export const downloadEncryptedFile = async (req, res) => {
   try {
     const { fileId } = req.params;
     const fileDoc = await FileModel.findById(fileId);
+    if (!fileDoc) return res.status(404).json({ error: 'File not found.' });
+    if (![fileDoc.owner, fileDoc.receiver].includes(req.user.username)) return res.status(403).json({ error: 'Access denied.' });
 
     await logEvent("file-download", { fileId, requester: req.user ? req.user.id : null }, req.user ? req.user.id : null);
     res.json(fileDoc);

@@ -1,37 +1,88 @@
 name: CI
-
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   pull_request:
-    branches: [ main, master ]
-
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
-  server-tests:
+  test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: Use Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '18'
-      - name: Install server deps
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            server/src/package-lock.json
+            client/package-lock.json
+      - run: npm ci
         working-directory: server/src
-        run: npm install
-      - name: Run server tests
+      - run: npm test
         working-directory: server/src
-        run: npm test
-
-  client-demo:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-      - name: Install client deps
+        env:
+          MONGOMS_VERSION: "7.0.14"
+      - run: npm ci
         working-directory: client
-        run: npm install || echo 'client install skipped if no deps'
-      - name: Run encrypt/decrypt demo
-        run: node client/src/tests/encrypt_file_demo.cjs
+      - run: npm run build
+        working-directory: client
+      - run: node client/src/tests/encrypt_file_demo.cjs
+      - run: node client/src/tests/conversation_crypto_demo.cjs
+
+  containers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+        working-directory: server/src
+      - run: node scripts/ops.mjs init
+      - run: docker compose config --quiet
+      - run: docker compose up -d --build --wait --wait-timeout 180
+      - run: node scripts/smoke.mjs
+      - name: Exercise backup and isolated restore
+        run: |
+          node scripts/ops.mjs backup
+          node scripts/ops.mjs restore-check "$(ls -t backups/*.archive.gz | head -1)"
+      - name: Validate monitoring rules
+        run: |
+          docker compose --profile monitoring run --rm --no-deps --entrypoint promtool prometheus check config /etc/prometheus/prometheus.yml
+          docker compose --profile monitoring run --rm --no-deps --entrypoint promtool prometheus check rules /etc/prometheus/alerts.yml
+      - name: Verify monitoring stack
+        run: |
+          docker compose --profile monitoring up -d --wait --wait-timeout 180 prometheus grafana
+          node scripts/check-monitoring.mjs
+      - name: Runtime image vulnerability reports
+        run: |
+          mkdir -p reports
+          mkdir -p scans
+          for image in api web; do
+            docker save -o "scans/$image.tar" "securechat-$image:local"
+            docker run --rm -v "$PWD/scans:/scans:ro" -v "$PWD/reports:/reports" aquasec/trivy:0.65.0 image --input "/scans/$image.tar" --scanners vuln --severity HIGH,CRITICAL --format json --output "/reports/$image.json"
+          done
+      - name: Secret scan
+        run: |
+          mkdir -p scan-source
+          git archive HEAD | tar -x -C scan-source
+          docker run --rm -v "$PWD/scan-source:/repo:ro" aquasec/trivy:0.65.0 fs --scanners secret --exit-code 1 /repo
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: vulnerability-reports
+          path: reports/
+          retention-days: 3
+      - name: Diagnostics
+        if: failure()
+        run: docker compose logs --tail 80
+      - name: Cleanup ephemeral CI stack
+        if: always()
+        run: docker compose --profile monitoring down -v

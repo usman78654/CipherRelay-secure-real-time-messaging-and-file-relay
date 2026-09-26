@@ -967,7 +967,7 @@ seenNonces.add(packet.nonce);
 ### Backward Compatibility
 
 **Legacy Support:**
-- PBKDF2 fallback for old key derivation
+- No deterministic password-, username-, or chat-ID-derived key fallback
 - Gradual migration to HKDF
 - Version field in protocol messages
 

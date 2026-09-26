@@ -1,7 +1,8 @@
 import axios from "axios";
 import { cacheGet } from "../storage/localCache";
+import config from '../config';
 
-const BASE = "http://localhost:5000/api/files";
+const BASE = `${config.API_BASE_URL}/files`;
 
 // UPLOAD ENCRYPTED FILE
 export const uploadEncryptedFile = async (payload) => {
@@ -13,7 +14,6 @@ export const uploadEncryptedFile = async (payload) => {
     throw new Error('Authentication required. Please login again.');
   }
   
-  console.log('Uploading file with auth token:', token.substring(0, 20) + '...');
   
   // payload is JSON: { owner, receiver, fileName, encryptedChunks, metadata }
   return axios.post(`${BASE}/upload`, payload, { 
