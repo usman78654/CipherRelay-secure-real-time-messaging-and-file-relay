@@ -5,7 +5,7 @@ RUN npm ci
 COPY client/ ./
 RUN npm run build
 
-FROM caddy:2.11.4-alpine AS runtime
+FROM caddy:2.11.6-alpine AS runtime
 COPY deploy/Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /app/build /srv
 EXPOSE 80 443
